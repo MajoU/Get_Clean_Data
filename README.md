@@ -17,4 +17,4 @@
 * Loads and cleans the data to create the tiny data.
 * Selects only the mean and std features.
 * Calculates the mean of each variable, aggregating over activity and subject.
-* Writes the result data frame to csv files in given path (factored_averages.csv).
+* Writes the result data frame to csv files in given path (tidy_dataset.csv and tidy_avg_dataset.csv).
