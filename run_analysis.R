@@ -3,64 +3,65 @@ library(plyr)
 library(reshape2)
 
 # set working directory
-setwd("~/UCI_HAR_Dataset/")
-
+setwd("~/Data_Science/Getting_and_Cleaning_Data/Get_and_Clean_Data/UCI_HAR_Dataset/")
 
 # FIRST TIDY DATA SET 
 
 # create a list of file names which have "train" in their names from directory 'train'
-train_files <- list.files("train", pattern = "train")
-
-# read each files from train_files by specific order and convert it to another list - train_list 
-train_list <- lapply(file.path("train", train_files[c(1,3,2)]), read.table)
-
-# bind each data frame from train_list by column
-train_df <- do.call("cbind", train_list)
-
-# this three codes below is identical to previous three codes.
-test_files <- list.files("test", pattern = "test")
-test_list <- lapply(file.path("test", test_files[c(1,3,2)]), read.table)
-test_df <- do.call("cbind", test_list)
+files <- file.path(c("test","train"), list.files(c("test","train"), pattern = "*.txt"))
+# read train files in specific order from files and convert it to data frame
+train_df <- do.call("cbind", lapply(grep("train", files[c(2,6,4)], value = T), read.table))
+# read test files in specific order from files and convert it to data frame
+test_df <- do.call("cbind", lapply(grep("test", files[c(1,5,3)], value = T), read.table))
 
 # merging two data frame - train_df and test_df
-merge_df <- rbind(train_df, test_df)
+train_test <- data.table(rbind(train_df, test_df))
 
 # read features.txt and create column names 
-features <- read.table("./features.txt", col.names = c("id", "labels"))
+features <- setnames(fread("./features.txt"), c("V1", "V2"), c("id", "label"))
+# data frame for cleaning features labels 
+clean <- data.frame(old = c("[()-,]","std","BodyBody","mean"), new = c("","Std", "Body","Mean"))
+# clean the features labels through lapply with gsub conditions - change
+# old variables for new variables
+g <- lapply(1:4, function(x) features[, label := gsub(clean$old[x], clean$new[x], label)])
+# change merge_df colnames as sucject, activity and features label names
+setnames(train_test, c("subject", "activity", features$label))
 
-# create column names in merge_df data frame 
-colnames(merge_df) <- c("subject", "activity", as.character(features$labels))
+# Extract the relevant features name from the features label
+mean_std <- grep("Mean|Std", features$label, value=T)
+# subset merge_df by specific column and names from mean_std
+sub_train_test <- merge_df[, c("subject", "activity", mean_std), with = F]
 
-# Extract the relevant features name from the features vector
-mean_std_names <- grep("mean\\(|std\\(", features$labels, value=T)
+#--------------------------------------------------------------------
+#  ALTERNATIVE 
 
-# subset merge_df by specific column names and character vector mean_std_names
-mean_std_df <- merge_df[, c("subject", "activity", mean_std_names)]
+# --- data table ------------------------------------------- 
+# sub_train_test <- subset(merge_df, select = c("subject", "activity", mean_std))
 
-# read activity_labels.txt and create column names
-act_lab <- read.table("./activity_labels.txt", col.names = c("activity_id", "labels"))
+# --- data frame -------------------------------------------
+# sub_train_test <- merge_df[, c("subject", "activity", mean_std_names)]
 
-# name activity id numbers in data set by activity labels from act_lab using merge
-# function
-tidy_df <- merge(act_lab, mean_std_df, by.x = "activity_id", by.y = "activity")
+#-------------------------------------------------------------------
+
+# read activity_labels.txt and create new column names
+activ <- setnames(fread("./activity_labels.txt"), c("V1", "V2"), c("activity", "label"))
+
+# merge sub_train_test and activ DT by activity id. This allocates
+# activity id to activity labels in new column 'label'
+tidy_df <- merge(setkey(activ), setkey(sub_train_test), by = "activity")
 
 # relocate data set columns and order activity_id variables by subject for better overview 
-tidy_df <- tidy_df[c("subject", "labels", "activity_id", mean_std_names)]
-tidy_df <- arrange(tidy_df, subject, activity_id)
+setcolorder(tidy_df, c("subject", "label", "activity", mean_std))
+tidy_df <- arrange(tidy_df, subject)
 
 
 # SECOND TIDY DATA SET
 
-# set id and measure variables with melt function
-tidy_df_melt <- melt(tidy_df, id=c("subject", "labels","activity_id"), measure.vars = mean_std_names)
-
-# create average tidy data frame through the dcast function. each
-# variables for subject with labels and activity is processed by mean.
-tidy_df_avg <- dcast(tidy_df_melt, subject + labels + activity_id ~ variable, mean)
+tidy_df_mean <- tidy_df[, lapply(.SD, mean), by = c("subject", "label")]
 
 # save the tidy data sets
 write.csv(tidy_df, "tidy_dataset.csv", row.names = F)
-write.csv(tidy_df_avg, "tidy_avg_dataset.csv", row.names = F)
+write.csv(tidy_df_mean, "tidy_avg_dataset.csv", row.names = F)
 
 
 
