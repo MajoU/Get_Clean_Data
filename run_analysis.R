@@ -52,11 +52,13 @@ tidy_df <- merge(setkey(activ), setkey(sub_train_test), by = "activity")
 
 # relocate data set columns and order activity_id variables by subject for better overview 
 setcolorder(tidy_df, c("subject", "label", "activity", mean_std))
+# arrange tidy_df by subject
 tidy_df <- arrange(tidy_df, subject)
 
 
 # SECOND TIDY DATA SET
 
+# aggregate all columns of tidy_df by subject and label
 tidy_df_mean <- tidy_df[, lapply(.SD, mean), by = c("subject", "label")]
 
 # save the tidy data sets
