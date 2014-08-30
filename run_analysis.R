@@ -61,6 +61,13 @@ tidy_df <- arrange(tidy_df, subject)
 # aggregate all columns of tidy_df by subject and label
 tidy_df_mean <- tidy_df[, lapply(.SD, mean), by = c("subject", "label")]
 
+# --------------------------------------------------------------
+# ALTERNATIVE
+
+# tidy_df_mean <- tidy_df[, lapply(.SD, mean), by = list(subject, label)]
+
+# --------------------------------------------------------------
+
 # save the tidy data sets
 write.csv(tidy_df, "tidy_dataset.csv", row.names = F)
 write.csv(tidy_df_mean, "tidy_avg_dataset.csv", row.names = F)
